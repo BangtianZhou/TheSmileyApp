@@ -34,12 +34,17 @@ def connect_to_cloudsql():
 # cursor = db.cursor()
 # cursor.execute("""USE Smiley""") # Specifies the name of DB
 
-""" Login related---------------------------------------------------------"""
+"""
+#  ________________________________________
+# |Definition of the Login Class           |
+# |________________________________________|
+"""
+
 class Login(flask_login.UserMixin):
     
     def __init__(self):
         self.exp_id = ''
-        self.experience = ''
+        self.experience = 0
     # pass
 
 @login_manager.user_loader
@@ -53,6 +58,12 @@ def user_loader(email):
 def test():
     return jsonify({'one':1, 'two':2})
 
+"""
+#  ________________________________________
+# |User & Login Related Sessions           |
+# |________________________________________|
+"""
+# Login function
 @app.route('/user', methods=['GET', 'POST'])
 def user_login():
     if request.method == 'POST':
@@ -77,14 +88,21 @@ def user_login():
                 user.exp_id = found_user.exp_id
 
                 flask_login.login_user(user)
-                print(flask_login.current_user.experience)
+                # print(flask_login.current_user.experience)
                 return jsonify({'status': 'success'}), 201
         return "", 400
 
     else:
         return "", 400
 
+# Logout function
+@app.route('/user_logout', methods=['GET'])
+def user_logout():
+    if request.method == 'GET':
+        logout_user()
+        return jsonify({'status': 'success'})
 
+# Create User
 @app.route('/create_user', methods=['GET', 'POST'])
 def create_user():
     if request.method == 'POST':
@@ -125,6 +143,12 @@ def create_user():
     else:
         return "", 400
 
+"""
+#  ________________________________________
+# | Profile Session                        |
+# |________________________________________|
+"""
+
 @app.route('/profile', methods=['GET', 'POST'])
 @flask_login.login_required
 def get_profile():
@@ -142,15 +166,16 @@ def get_profile():
     else:
         return "", 400
 
+"""
+#  ________________________________________
+# | Friend & Relationship Section          |
+# |________________________________________|
+"""
+
 @app.route('/friendlist', methods=['GET', 'POST', 'DELETE'])
 @flask_login.login_required
 def get_friendlist():
     if request.method == 'GET':
-        # if request.form.get('rule') == 'default':
-        # test = []
-        # test.append({'name':'Mike', 'email': 'baba@gmail.com', 'explorer_num': '00012'})
-        # test.append({'name':'Kate', 'email': 'kitea@gmail.com', 'explorer_num': '00032'})
-        # test.append({'name':'Bob', 'email': 'boli@gmail.com', 'explorer_num': '00071'})
         db = connect_to_cloudsql()
         cursor = db.cursor()
         cursor.execute("""USE Smiley""") # Specifies the name of DB
@@ -161,7 +186,7 @@ def get_friendlist():
 
     elif request.method == 'POST':
         to_email = request.form.get('email')
-        status = 'follow'
+        status = 1
 
         db = connect_to_cloudsql()
         cursor = db.cursor()
@@ -185,16 +210,17 @@ def get_friendlist():
     else:
         return "", 400
 
+
+"""
+#  ________________________________________
+# | Map related Session                    |
+# |________________________________________|
+"""
 # Map view
 @app.route('/map', methods=['GET', 'POST'])
 @flask_login.login_required
 def get_map():
     if request.method == 'GET':
-        # if request.form.get('rule') == 'default':
-        # test = []
-        # test.append({'url':'https://storage.googleapis.com/smileyappios.appspot.com/marker-2017-10-10-212652.jpg', 'lat': '33.7926977', 'lng': '-84.36952639999998'})
-        # test.append({'url':'https://storage.googleapis.com/smileyappios.appspot.com/marker-2017-10-12-002946.jpg', 'lat': '33.7563179', 'lng': '-84.37345149999999'})
-        # test.append({'url':'https://storage.googleapis.com/smileyappios.appspot.com/marker-2017-10-09-182320.jpg', 'lat': '33.7036039', 'lng': '-84.39714939999999'})
         
         rule = request.form.get('rule')
         if not rule: rule = 'default' # Set default rule
@@ -206,10 +232,15 @@ def get_map():
         cursor.close()
         db.close()
 
-        # data.append({'url':'https://storage.googleapis.com/smileyappios.appspot.com/marker-2017-10-10-212652.jpg', 'lat': '33.7926977', 'lng': '-84.36952639999998'})
         return jsonify(data)
     else:
         return "", 400
+
+"""
+#  ________________________________________
+# | Attraction related Session             |
+# |________________________________________|
+"""
 
 # Attraction View
 @app.route('/attraction', methods=['GET', 'POST'])
@@ -221,20 +252,25 @@ def create_a_new_place_post():
         lat = request.form.get('lat')
         lng = request.form.get('lng')
         intro = request.form.get('intro')
+        rating = request.form.get('rating')
         cover_file = request.files.get('cover')
         marker_file = request.files.get('marker')
 
         marker = upload_image_file(marker_file)
         cover = upload_image_file(cover_file)
+        # print(marker)
 
-        # score = flask_login.current_user.experience
+        # Calculate the score based on the user experience and the rating
+        score = int(float(flask_login.current_user.experience)/10.0 * (float(rating) + 10))
+        
         ID = marker
         email = flask_login.current_user.id
-        address, map_name = gps_to_address(float(lat), float(lng))
+        # address, map_name, lat, lng = gps_to_address(float(lat), float(lng))
+        address = gps_to_address(float(lat), float(lng))
 
-        # If the place already exist, use the name from google map
-        if map_name != '_new':
-            name = map_name
+        # # If the place already exist, use the name from google map
+        # if map_name != '_new':
+        #     name = map_name
 
         date_created = get_date()
 
@@ -246,7 +282,7 @@ def create_a_new_place_post():
         found_user = fetch_user(flask_login.current_user.id, cursor)
         score = found_user.experience
         # Create an attraction
-        attraction = Attraction(ID, name, marker, cover, lat, lng, intro, score, address, email, date_created)
+        attraction = Attraction(ID, name, marker, cover, lat, lng, intro, score, rating, address, email, date_created)
 
         insert_new_attraction(attraction, cursor)
         cursor.close()
@@ -254,46 +290,15 @@ def create_a_new_place_post():
 
         return jsonify({'status': 'success'}), 201
 
-    elif request.method == 'GET':
-        
-        db = connect_to_cloudsql()
-        cursor = db.cursor()
-        cursor.execute("""USE Smiley""") # Specifies the name of DB
-        ID = request.args.get('attraction')
-        place_info = look_up_place_data(ID, cursor)
-
-        # place_info = {
-        #     'url': 'https://storage.googleapis.com/smileyappios.appspot.com/cover-2017-10-10-212653.jpg',
-        #     'Name':'Georgia State Fair',
-        #     'Address': '2009 Test Drive, Atlanta 30309',
-        #     'ExpID': '00001',
-        #     'ExpName':'Smiley Baby',
-        #     'Intro': 'A great event'
-        # }
-
-        cursor.close()
-        db.close()
-
-        return jsonify(place_info)
     else:
         return '', 404
     # return marker
 
 def get_date():
-    today = datetime.datetime.today()
 
-    # Zero padding dates
-    if today.month<10:
-        month = '0'+str(today.month)
-    else:
-        month = str(today.month)
-
-    if today.day<10:
-        day = '0'+str(today.day)
-    else:
-        day = str(today.day)
-    date = str(today.year) + month + day
+    date = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
     return date
+
 
 def upload_image_file(file):
     # Upload the user-uploaded file to Google Cloud Storage and retrieve its
@@ -307,6 +312,28 @@ def upload_image_file(file):
 
     return public_url
 
+"""
+#  ________________________________________
+# | Location Service section               |
+# |________________________________________|
+"""
+# Return the places nearby to the front end for selection
+@app.route('/selectPlacesNearby', methods=['GET'])
+def get_list_of_places_near_a_coordinate():
+    if request.method == 'GET':
+        lat = request.args.get('lat')
+        lng = request.args.get('lng')
+        place_list = gps_to_place_list(lat, lng)
+        if place_list != "_new":
+            return jsonify(place_list)
+        else:
+            return "", 400
+        
+"""
+#  ________________________________________
+# | Liking section                         |
+# |________________________________________|
+"""
 # Liking 
 @app.route('/like', methods=['GET', 'POST'])
 @flask_login.login_required
@@ -315,78 +342,157 @@ def like_a_place():
         # Read Data
         attraction = request.form.get('attraction')
         like = request.form.get('like')
+        # like = int(like)
+
+        # Temporary Solution
+        if like == '1':
+            like = 2
+        else:
+            like = -1
+
         email = flask_login.current_user.id
 
         if attraction and like and email:
+            date_created = get_date()
             db = connect_to_cloudsql()
             cursor = db.cursor()
             cursor.execute("""USE Smiley""") # Specifies the name of DB
-            add_like(email, attraction, like, cursor)
+            add_like(email, attraction, like, date_created, cursor)
             cursor.close()
             db.close() # Close the cursor and db connection
             return jsonify({'status': 'success'}), 201
 
         return "", 400
-        
+
+    elif request.method == 'GET':
+        # Read Attraction ID
+        attraction_ID = request.args.get('attraction')
+        db = connect_to_cloudsql()
+        cursor = db.cursor()
+        cursor.execute("""USE Smiley""") # Specifies the name of DB
+        data = fetch_like(flask_login.current_user.id, attraction_ID, cursor)
+        cursor.close()
+
+        if data:
+            return_data = {'rating': data[2]}
+        else:
+            return_data = {'rating': 0}
+
+        return jsonify(return_data)
+
     return "", 400
 
+"""
+#  ________________________________________
+# |All Web Relation Content below this line|
+# |________________________________________|
+"""
+# No login required
+@app.route('/LookUpPlace', methods=['GET'])
+def request_place_look_up():
+    if request.method == 'GET':
+        
+        db = connect_to_cloudsql()
+        cursor = db.cursor()
+        cursor.execute("""USE Smiley""") # Specifies the name of DB
+        ID = request.args.get('attraction')
+        # print(ID)
+        place_info, reviews_data = look_up_place_data(ID, cursor)
+        cursor.close()
+        db.close()
+
+        rendered_template = render_place_data_template(place_info, reviews_data)
+        return rendered_template
+        # return jsonify(place_info)
+
+def render_place_data_template(place_info, reviews_data):
+    
+    # return render_template('profile.html', name = found_user.name, email = found_user.email, \
+    # goal = found_user.goal, group = json.dumps(data))
+    reviews_data = reviews_data[0:-1] # Get rid of the earlist review, which is created by the explorer
+    return render_template('place_template.html', place = place_info, reviews = reviews_data)
+
+# Table Setting Functions
 # Function handlers
 @app.route('/init_all_this_is_a_secret_key_not_posting_here')
 def init_all_tables():
     
-    db = connect_to_cloudsql()
-    cursor = db.cursor()
-    cursor.execute("""USE Smiley""") # Specifies the name of DB
+    # db = connect_to_cloudsql()
+    # cursor = db.cursor()
+    # cursor.execute("""USE Smiley""") # Specifies the name of DB
 
-    # cursor.execute("""DROP TABLE Users""")
+    # # Clean all tables
+    # cursor.execute("""SET FOREIGN_KEY_CHECKS = 0""")
+    # cursor.execute("""DROP TABLE IF EXISTS Users""")
+    # cursor.execute("""DROP TABLE IF EXISTS Attractions""")
+    # cursor.execute("""DROP TABLE IF EXISTS Friends""")
+    # cursor.execute("""DROP TABLE IF EXISTS Likes""")
+    # cursor.execute("""DROP TABLE IF EXISTS Reviews""")
+    # cursor.execute("""SET FOREIGN_KEY_CHECKS = 1""")
+
+    # # Create all Tables
     # cursor.execute("""CREATE TABLE Users (
     # exp_id varchar(15),
     # name varchar(50),
-    # email varchar(50) PRIMARY KEY,
+    # email varchar(50),
     # password varchar(255),
-    # experience varchar(10)
+    # experience int,
+    # PRIMARY KEY(email)
     # )""")
 
-    # cursor.execute("""DROP TABLE Attractions""")
     # cursor.execute("""CREATE TABLE Attractions (
     # ID varchar(255) PRIMARY KEY,
     # name varchar(255),
     # marker varchar(255),
     # cover varchar(255),
-    # lat varchar(50),
-    # lng varchar(50),
-    # intro varchar(255),
-    # score varchar(15),
+    # lat double,
+    # lng double,
+    # intro varchar(800),
+    # score float,
     # address varchar(255),
     # email varchar(50),
-    # date_created varchar(15)
+    # date_created DATETIME
     # )""")
+    # # !!!
+    # # A bug in the data_created, need further investigation
+    # # !!!
 
-    # cursor.execute("""DROP TABLE Friends""")
     # cursor.execute("""CREATE TABLE Friends (
-    # by_user_email varchar(50),
-    # to_user_email varchar(50),
-    # relation varchar(15)
-    # )""")
+    # by_user_email varchar(50) NOT NULL,
+    # to_user_email varchar(50) NOT NULL,
+    # relation float,
+    # FOREIGN KEY (by_user_email) REFERENCES Users(email)
+    # ON DELETE CASCADE ON UPDATE CASCADE,
+    # FOREIGN KEY (to_user_email) REFERENCES Users(email)
+    # ON DELETE CASCADE ON UPDATE CASCADE,
+    # UNIQUE (by_user_email, to_user_email) )""")
 
-    # cursor.execute("""DROP TABLE Likes""")
     # cursor.execute("""CREATE TABLE Likes (
     # user_email varchar(50),
-    # attraction_url varchar(255),
-    # rating varchar(15)
+    # attraction_ID varchar(255),
+    # rating float,
+    # date_created DATETIME,
+    # FOREIGN KEY (user_email) REFERENCES Users(email)
+    # ON DELETE CASCADE ON UPDATE CASCADE,
+    # FOREIGN KEY (attraction_ID) REFERENCES Attractions(ID)
+    # ON DELETE CASCADE ON UPDATE CASCADE
     # )""")
 
-    # # cursor.execute("""DROP TABLE Reviews""")
     # cursor.execute("""CREATE TABLE Reviews (
     # user_email varchar(50),
-    # attraction_url varchar(255),
-    # image_url varchar(255),
-    # intro varchar(255),
-    # rating varchar(15)
+    # attraction_ID varchar(255),
+    # cover_url varchar(255),
+    # marker_url varchar(255),
+    # intro varchar(800),
+    # rating float,
+    # FOREIGN KEY (user_email) REFERENCES Users(email)
+    # ON DELETE CASCADE ON UPDATE CASCADE,
+    # date_created DATETIME,
+    # FOREIGN KEY (attraction_ID) REFERENCES Attractions(ID)
+    # ON DELETE CASCADE ON UPDATE CASCADE
     # )""")
-
-    cursor.close()
-    db.close()
+    # cursor.close()
+    # db.close()
 
     return jsonify({'Set up': 'Done'}), 200
 

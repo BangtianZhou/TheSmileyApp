@@ -25,6 +25,10 @@ class CampViewController: UIViewController, CLLocationManagerDelegate {
     override func viewDidLoad() {
         super.viewDidLoad()
         
+        // Set the mapView to jump to my current location
+        currentControlFlow.isFromCamp = true
+        
+        // Look for last saved GPS location
         let savedLat = UserDefaults.standard.double(forKey: "userLat")
         let savedLng = UserDefaults.standard.double(forKey: "userLng")
         
@@ -35,9 +39,6 @@ class CampViewController: UIViewController, CLLocationManagerDelegate {
         else{
             self.enterSmileyButton.isEnabled = false //Hold until location aquired.
         }
-        
-//        // Request User Infomation
-//        requestProfileInfo(email:currentUser.email)
         
         // Request Friendlist and Places
         requestFriendList(email: currentUser.email)
@@ -83,4 +84,9 @@ class CampViewController: UIViewController, CLLocationManagerDelegate {
         super.didReceiveMemoryWarning()
         // Dispose of any resources that can be recreated.
     }
+    
+    @IBAction func logoutButton(_ sender: Any) {
+        Alamofire.request("https://thatsmileycompany.com/user_logout", method: .get)
+    }
+    
 }

@@ -26,21 +26,23 @@ struct User {
     var name:String!
 }
 
+struct ControlFlow {
+    var ifMap:Bool = true
+    var lastLat:Double!
+    var lastLng:Double!
+    var lastZoom:Float!
+    var isFromCamp:Bool = true
+}
+
 var Places = [[String]]()
 var PlacesMarker = [UIImage]()
+var selectPlacesList = [[String]]()
+
 class FriendList: NSObject {
     
     static var friendlist:[[String]] = []
     
-//    func initFriend(rows: Int){
-//        for _ in stride(from: 0, to: rows, by: 1){
-//            FriendList.friendlist.append([])
-//        }
-//    }
     func addFriend( newFriend:String, emailID: String, ExNum: String){
-//        FriendList.friendlist[0].append(newFriend) //Name
-//        FriendList.friendlist[1].append(emailID) //ID
-//        FriendList.friendlist[2].append(ExNum) //Explore Number
         let oneNewFriend:[String] = [newFriend, emailID, ExNum]
         FriendList.friendlist.append(oneNewFriend)
     }
@@ -72,6 +74,7 @@ class FriendList: NSObject {
 // create friendlist and user objects
 var Friends = FriendList()
 var currentUser = User()
+var currentControlFlow = ControlFlow()
 
 // extensions
 extension UIImage {
@@ -86,6 +89,7 @@ extension UIImage {
         UIGraphicsEndImageContext()
         return result
     }
+    
     func resizeWithWidth(width: CGFloat) -> UIImage? {
         let imageView = UIImageView(frame: CGRect(origin: .zero, size: CGSize(width: width, height: CGFloat(ceil(width/size.width * size.height)))))
         imageView.contentMode = .scaleAspectFit
@@ -97,6 +101,31 @@ extension UIImage {
         UIGraphicsEndImageContext()
         return result
     }
+    
+    func resizeWithHeight(height: CGFloat) -> UIImage? {
+        let imageView = UIImageView(frame: CGRect(origin: .zero, size: CGSize(width: CGFloat(ceil(height/size.height * size.width)), height: height)))
+        imageView.contentMode = .scaleAspectFit
+        imageView.image = self
+        UIGraphicsBeginImageContextWithOptions(imageView.bounds.size, false, scale)
+        guard let context = UIGraphicsGetCurrentContext() else { return nil }
+        imageView.layer.render(in: context)
+        guard let result = UIGraphicsGetImageFromCurrentImageContext() else { return nil }
+        UIGraphicsEndImageContext()
+        return result
+    }
+    
+    func resizeWithSquare(length: CGFloat) -> UIImage? {
+        let imageView = UIImageView(frame: CGRect(origin: .zero, size: CGSize(width: length, height: length)))
+        imageView.contentMode = .scaleAspectFit
+        imageView.image = self
+        UIGraphicsBeginImageContextWithOptions(imageView.bounds.size, false, scale)
+        guard let context = UIGraphicsGetCurrentContext() else { return nil }
+        imageView.layer.render(in: context)
+        guard let result = UIGraphicsGetImageFromCurrentImageContext() else { return nil }
+        UIGraphicsEndImageContext()
+        return result
+    }
+    
 }
 
 extension UIViewController
@@ -150,6 +179,9 @@ func requestPlaces(email:String, rule:String)
                     Places[i].append(place["url"].stringValue)
                     Places[i].append(place["lat"].stringValue)
                     Places[i].append(place["lng"].stringValue)
+                    Places[i].append(place["name"].stringValue)
+                    Places[i].append(place["discover"].stringValue)
+                    Places[i].append(place["rating"].stringValue)
                     // Update the image holder
                     PlacesMarker.append(LoadIMG(url: place["url"].stringValue))
                 }

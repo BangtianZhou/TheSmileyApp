@@ -63,57 +63,15 @@ def insert_new_user(User, cursor):
     cursor.execute("""COMMIT""")
     pass
 
-
-# Reviews
-def insert_new_reviews(attraction, cursor):
-    cursor.execute("""
-        SELECT
-        ID, name, marker, cover, lat, lng, intro, score, address, email, date_created
-        FROM
-        Attractions
-        WHERE
-        address = %s""",
-        (attraction.address,))
-    info = cursor.fetchone()
-    cursor.execute("""
-        INSERT INTO
-        Reviews
-        (user_email, attraction_ID, cover_url, marker_url, intro, rating, date_created)
-        VALUES
-        (%s, %s, %s, %s, %s, %s, %s)""",
-        (attraction.email, info[0], attraction.cover, attraction.marker, attraction.intro, int(attraction.score), int(attraction.date_created)))
-    cursor.execute("""COMMIT""")
-
-
-
 # Attractions
 def insert_new_attraction(attraction, cursor):
-    cursor.execute("""
-        SELECT 
-        ID, name, marker, cover, lat, lng, intro, score, address, email, date_created
-        FROM 
-        Attractions
-        WHERE 
-        address = %s""",
-        (attraction.address,))
-    info = cursor.fetchone()
-    if info:
-        cursor.execute("""
-            INSERT INTO 
-            Reviews 
-            (user_email, attraction_ID, cover_url, marker_url, intro, rating, date_created)
-            VALUES 
-            (%s, %s, %s, %s, %s, %s, %s)""",
-            (attraction.email, info[0], attraction.cover, attraction.marker, attraction.intro, int(attraction.score), int(attraction.date_created)))
-        cursor.execute("""COMMIT""")
-    else:
-        cursor.execute("""INSERT INTO Attractions (ID, name, marker, cover, lat, lng, intro, score, address, email, date_created)
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)""",
-            (attraction.ID, attraction.name, attraction.marker, attraction.cover,
-             attraction.lat, attraction.lng, attraction.intro, attraction.score,
-             attraction.address, attraction.email, attraction.date_created))
-        cursor.execute("""COMMIT""")
-        pass
+    cursor.execute("""INSERT INTO Attractions (ID, name, marker, cover, lat, lng, intro, score, address, email, date_created) 
+        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)""", 
+        (attraction.ID, attraction.name, attraction.marker, attraction.cover, 
+         attraction.lat, attraction.lng, attraction.intro, attraction.score, 
+         attraction.address, attraction.email, attraction.date_created))
+    cursor.execute("""COMMIT""")
+    pass
 
 def fetch_attraction(ID, cursor):
     cursor.execute("""SELECT ID, name, marker, cover, lat, lng, intro, score, address, email, date_created

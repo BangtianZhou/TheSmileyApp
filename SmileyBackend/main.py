@@ -226,8 +226,7 @@ def create_a_new_place_post():
 
         marker = upload_image_file(marker_file)
         cover = upload_image_file(cover_file)
-        #marker = name
-#cover = name
+
         # score = flask_login.current_user.experience
         ID = marker
         email = flask_login.current_user.id

@@ -253,13 +253,17 @@ def create_a_new_place_post():
         lng = request.form.get('lng')
         intro = request.form.get('intro')
         rating = request.form.get('rating')
+        if_private = request.form.get('ifPrivate')
+        
         cover_file = request.files.get('cover')
         marker_file = request.files.get('marker')
-
+        #marker = "001"
+        #cover = "001"
         marker = upload_image_file(marker_file)
         cover = upload_image_file(cover_file)
-        # print(marker)
-
+        #print(marker)
+        
+        #print(flask_login.current_user.experience,rating)
         # Calculate the score based on the user experience and the rating
         score = int(float(flask_login.current_user.experience)/10.0 * (float(rating) + 10))
         
@@ -284,7 +288,7 @@ def create_a_new_place_post():
         # Create an attraction
         attraction = Attraction(ID, name, marker, cover, lat, lng, intro, score, rating, address, email, date_created)
 
-        insert_new_attraction(attraction, cursor)
+        insert_new_attraction(attraction = attraction, cursor = cursor, if_private = if_private)
         cursor.close()
         db.close()
 
@@ -323,7 +327,10 @@ def get_list_of_places_near_a_coordinate():
     if request.method == 'GET':
         lat = request.args.get('lat')
         lng = request.args.get('lng')
-        place_list = gps_to_place_list(lat, lng)
+        db = connect_to_cloudsql()
+        cursor = db.cursor()
+        cursor.execute("""USE Smiley""")
+        place_list = gps_to_place_list(lat, lng, cursor)
         if place_list != "_new":
             return jsonify(place_list)
         else:

@@ -69,15 +69,26 @@ def insert_new_user(User, cursor):
     pass
 
 # Attractions
-def insert_new_attraction(attraction, cursor):
+def insert_new_attraction(attraction, cursor, if_private = False):
+    
     cursor.execute("""
-        SELECT 
+        SELECT
         ID, name, marker, cover, lat, lng, intro, score, address, email, date_created
-        FROM 
+        FROM
+        (SELECT * FROM
         Attractions
-        WHERE 
-        address = %s""",
-        (attraction.address,))
+        UNION
+        (
+        SELECT * FROM
+        Attractions_private
+        )
+        ) AS TB1
+        WHERE
+        lat = %s
+        AND
+        lng = %s
+        """,
+        (attraction.lat, attraction.lng,))
     info = cursor.fetchone()
 
     # Locatiion Existed
@@ -104,8 +115,14 @@ def insert_new_attraction(attraction, cursor):
 
     # Location Not Existed
     else:
-        cursor.execute("""INSERT INTO Attractions (ID, name, marker, cover, lat, lng, intro, score, address, email, date_created)
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)""",
+        # Check to add into private or public attraction table
+        if if_private:
+            attraction_table = 'Attractions_private'
+        else:
+            attraction_table = 'Attractions'
+        
+        cursor.execute("""INSERT INTO {} (ID, name, marker, cover, lat, lng, intro, score, address, email, date_created)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)""".format(attraction_table),
             (attraction.ID, attraction.name, attraction.marker, attraction.cover,
              attraction.lat, attraction.lng, attraction.intro, int(attraction.score),
              attraction.address, attraction.email, attraction.date_created))
@@ -132,7 +149,17 @@ def fetch_attraction(ID, cursor):
 
 """ Read marker for different rules"""
 def read_all_marker(cursor):
-    cursor.execute("""SELECT marker, lat, lng FROM Attractions""")
+    cursor.execute("""
+        SELECT marker, lat, lng 
+        FROM 
+            (SELECT * FROM
+            Attractions
+            UNION
+                (
+                SELECT * FROM
+                Attractions_private
+                )
+            ) AS TB1""")
     all_markers = cursor.fetchall()
     # Markers format: [0] marker, [1] lat, [2] lng, [3] attraction_name, [4] discover, [5] rating
     data = []
@@ -249,7 +276,7 @@ def read_all_friends_marker(email, cursor, ifNews = True):
 
     # (Global Ranking 5)
     cursor.execute("""
-    SELECT marker, lat, lng, attraction_name, CONCAT(name, ' :global') AS discover, score AS rating
+    SELECT marker, lat, lng, attraction_name, CONCAT(name, ' *') AS discover, score AS rating
     FROM 
     (
         SELECT marker, lat, lng, ID, Attractions.name AS attraction_name, email, score
@@ -342,9 +369,9 @@ def look_up_reviews_for_a_place(ID, cursor):
     cursor.execute("""
     SELECT name, cover_url, intro, date_created
     FROM
-    (SELECT attraction_ID, user_email, cover_url, intro, date_created FROM Reviews
-    WHERE attraction_ID = %s
-    ) AS Newest
+        (SELECT attraction_ID, user_email, cover_url, intro, date_created FROM Reviews
+        WHERE attraction_ID = %s
+        ) AS Newest
     LEFT JOIN
     Users
     ON Newest.user_email = Users.email
